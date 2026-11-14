@@ -40,15 +40,21 @@
     .right-hud {
       position: absolute; top: 20px; right: 24px; z-index: 20;
       background: rgba(11, 13, 23, 0.92); border: 1px solid #00f0ff;
-      padding: 15px; border-radius: 10px; width: 310px; font-size: 11px;
+      padding: 15px; border-radius: 10px; width: 330px; font-size: 11px;
+      max-height: 82vh; overflow-y: auto;
     }
     .nasa-badge { color: #10b981; font-weight: bold; margin-bottom: 6px; display: block; }
     .science-box {
       margin-top: 10px; background: rgba(0, 240, 255, 0.05);
-      border: 1px dashed rgba(0, 240, 255, 0.4); padding: 8px; border-radius: 6px;
+      border: 1px dashed rgba(0, 240, 255, 0.4); padding: 10px; border-radius: 6px;
     }
-    .science-box summary { cursor: pointer; font-weight: bold; color: #00f0ff; outline: none; }
-    .science-box p { margin: 6px 0 0 0; color: #cbd5e1; line-height: 1.4; font-size: 10.5px; }
+    .science-box summary { cursor: pointer; font-weight: bold; color: #00f0ff; outline: none; font-size: 11.5px; }
+    .science-box p { margin: 8px 0 0 0; color: #cbd5e1; line-height: 1.45; font-size: 10.5px; }
+    .science-box h4 { margin: 10px 0 3px 0; color: #10b981; font-size: 11px; }
+
+    /* Kaydırma Çubuğu Özelleştirmesi */
+    .right-hud::-webkit-scrollbar { width: 5px; }
+    .right-hud::-webkit-scrollbar-thumb { background: #00f0ff; border-radius: 4px; }
 
     /* Alt Kontrol Butonları */
     .bottom-controls {
@@ -102,11 +108,19 @@
       • <strong>CRISM:</strong> Carbonate mineral target beacon
     </div>
     
-    <!-- Ek Bilgi Paneli (Açılır Kapanır Bilgi Kutusu) -->
-    <details class="science-box">
-      <summary>🔬 JEZERO CRATER SCIENCE INFO</summary>
-      <p><strong>Ancient Lake & Delta:</strong> Billions of years ago, Jezero hosted a large lake and river delta, ideal for preserving ancient organic molecules and microbial fossils.</p>
-      <p style="margin-top:4px;"><strong>Perseverance Mission:</strong> Selected as the prime landing site for Mars 2020 to search for biosignatures and collect sample cores.</p>
+    <!-- Detaylı Bilimsel Bilgi Paneli -->
+    <details class="science-box" open>
+      <summary>🔬 JEZERO CRATER SCIENCE BRIEF</summary>
+      <p>Jezero Crater is an ancient impact crater about 45 kilometers (28 miles) in diameter, located on Mars. It gained global prominence when it was chosen as the landing site for NASA's Mars 2020 mission, carrying the Perseverance rover and the Ingenuity helicopter.</p>
+      
+      <h4>1. Ancient Lake and River Delta</h4>
+      <p>Billions of years ago, when Mars had a wet and potentially habitable climate, Jezero Crater held a large lake. An ancient river delta is clearly visible on the crater's rim, formed by sediment deposits carried by flowing water, much like deltas on Earth.</p>
+
+      <h4>2. Search for Biosignatures &amp; Organics</h4>
+      <p>The fine-grained clay minerals and sediments at the ancient lake bed are ideal environments for preserving past microscopic life (microbial fossils). Perseverance is exploring here to search for signs of past life and collect rock samples for future return to Earth.</p>
+
+      <h4>3. Rich Mineral Diversity</h4>
+      <p>Data from NASA orbiters has shown the presence of carbonate and clay minerals within the crater. These minerals indicate water-rock interactions and are critical for tracking potential biological processes.</p>
     </details>
   </div>
 
@@ -133,7 +147,6 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.maxPolarAngle = Math.PI / 2 - 0.05;
@@ -152,7 +165,6 @@
 
     const pos = terrainGeo.attributes.position;
 
-
     function getElevation(x, z) {
       const dist = Math.sqrt(x * x + z * z);
       let craterRim = dist > 45 ? Math.pow((dist - 45) * 0.24, 1.45) : 0;
@@ -166,7 +178,6 @@
       const z = pos.getZ(i);
       pos.setY(i, getElevation(x, z));
     }
-
 
     terrainGeo.computeVertexNormals();
 
@@ -277,7 +288,6 @@
     document.getElementById('chk-slope').onchange = (e) => hazardGroup.visible = e.target.checked;
     document.getElementById('chk-oxy').onchange = (e) => oxyRing.visible = e.target.checked;
 
-
     let cameraMode = 'orbit';
     function setCameraMode(mode) {
       cameraMode = mode;
@@ -294,7 +304,6 @@
         document.getElementById('nav-status').innerText = "MODE: ASTRONAUT HELMET 3D POV (First-Person Surface View)";
       }
     }
-
 
     let walkIndex = 0;
     let isWalking = false;
@@ -320,12 +329,10 @@
       isWalking = true;
     }
 
-
     setInterval(() => {
       let temp = (-63.1 + (Math.random() * 1.2 - 0.6)).toFixed(1);
       document.getElementById('temp').innerText = `${temp} °C (STABLE)`;
     }, 2000);
-
 
     function animate() {
       requestAnimationFrame(animate);
