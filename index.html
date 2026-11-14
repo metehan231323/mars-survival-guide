@@ -26,7 +26,7 @@
     }
     .compass { font-size: 15px; letter-spacing: 2px; font-weight: bold; }
 
-    /* Sol Panel: EVA Suit Telemetri ve Katmanlar (Yazılar büyütüldü) */
+    /* Sol Panel: EVA Suit Telemetri ve Katmanlar */
     .left-hud {
       position: absolute; top: 20px; left: 24px; z-index: 20;
       background: rgba(11, 13, 23, 0.92); border: 1px solid #00f0ff;
@@ -36,7 +36,7 @@
     h3 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #00f0ff; padding-bottom: 6px; }
     label { display: block; margin: 8px 0; cursor: pointer; font-size: 13px; color: #e2e8f0; }
 
-    /* Sağ Panel: NASA Veri Kaynakları ve Bilgi Paneli (Genişletildi ve Yazılar Büyütüldü) */
+    /* Sağ Panel: NASA Veri Kaynakları ve Bilgi Paneli */
     .right-hud {
       position: absolute; top: 20px; right: 24px; z-index: 20;
       background: rgba(11, 13, 23, 0.92); border: 1px solid #00f0ff;
@@ -52,7 +52,7 @@
     .science-box p { margin: 10px 0 0 0; color: #cbd5e1; line-height: 1.5; font-size: 12.5px; }
     .science-box h4 { margin: 12px 0 4px 0; color: #10b981; font-size: 13px; }
 
-    /* Kaydırma Çubuğu Özelleştirmesi */
+    
     .right-hud::-webkit-scrollbar { width: 6px; }
     .right-hud::-webkit-scrollbar-thumb { background: #00f0ff; border-radius: 4px; }
 
@@ -108,7 +108,7 @@
       • <strong>CRISM:</strong> Carbonate mineral target beacon
     </div>
     
-    <!-- Detaylı Bilimsel Bilgi Paneli -->
+    
     <details class="science-box" open>
       <summary>🔬 JEZERO CRATER SCIENCE BRIEF</summary>
       <p>Jezero Crater is an ancient impact crater about 45 kilometers (28 miles) in diameter, located on Mars. It gained global prominence when it was chosen as the landing site for NASA's Mars 2020 mission, carrying the Perseverance rover and the Ingenuity helicopter.</p>
@@ -152,14 +152,14 @@
     controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
     // 2. Doğal Mars Güneşi Aydınlatması
-    scene.add(new THREE.AmbientLight(0xffb594, 0.6));
-    const sunLight = new THREE.DirectionalLight(0xffe8d6, 1.2);
+    scene.add(new THREE.AmbientLight(0xffb594, 0.65));
+    const sunLight = new THREE.DirectionalLight(0xffe8d6, 1.25);
     sunLight.position.set(80, 130, 60);
     scene.add(sunLight);
 
-    // 3. Doğal Mars Yüzeyi Mesh Modeli
+    // 3. Doğal Mars Yüzeyi Mesh Modeli (Yüksek çözünürlüklü ve pürüzsüz zemin)
     const size = 180;
-    const segments = 110;
+    const segments = 128;
     const terrainGeo = new THREE.PlaneGeometry(size, size, segments, segments);
     terrainGeo.rotateX(-Math.PI / 2);
 
@@ -183,7 +183,7 @@
 
     const terrainMat = new THREE.MeshStandardMaterial({
       color: 0x9c4628,
-      roughness: 0.92,
+      roughness: 0.9,
       metalness: 0.05,
       flatShading: true
     });
@@ -194,7 +194,7 @@
     const wireGeo = new THREE.WireframeGeometry(terrainGeo);
     const wireMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.1 });
     const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
-    wireMesh.position.y = 0.06;
+    wireMesh.position.y = 0.08;
     wireMesh.visible = false;
     scene.add(wireMesh);
 
@@ -203,17 +203,24 @@
       const y = getElevation(x, z);
       const group = new THREE.Group();
       const beacon = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.5, 0.5, labelHeight, 16),
+        new THREE.CylinderGeometry(0.45, 0.45, labelHeight, 16),
         new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.85 })
       );
       beacon.position.y = labelHeight / 2;
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(1.8, 2.6, 24),
-        new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide })
-      );
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.y = 0.3;
-      group.add(beacon, ring);
+
+      // Araziye gömülmemesi için yükseltilmiş kontur halkası
+      const ringPts = [];
+      for (let a = 0; a <= 32; a++) {
+        const theta = (a / 32) * Math.PI * 2;
+        const rx = x + Math.cos(theta) * 2.4;
+        const rz = z + Math.sin(theta) * 2.4;
+        ringPts.push(new THREE.Vector3(rx, getElevation(rx, rz) + 0.35, rz));
+      }
+      const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
+      const ringLine = new THREE.Line(ringGeo, new THREE.LineBasicMaterial({ color: color }));
+      scene.add(ringLine);
+
+      group.add(beacon);
       group.position.set(x, y, z);
       scene.add(group);
       return group;
@@ -227,38 +234,120 @@
     createMarker(sciencePos.x, sciencePos.z, 0x10b981, 16); // Bilimsel Hedef
     createMarker(shelterPos.x, shelterPos.z, 0x38bdf8, 16); // Lav Tüpü Sığınağı
 
-    // Astronot Modeli
-    const astroMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(1.4, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00f0ff, emissiveIntensity: 0.8 })
-    );
-    astroMesh.position.set(habPos.x, getElevation(habPos.x, habPos.z) + 1.6, habPos.z);
+    // 5. EKLEM PIVOTLARI DÜZELTİLMİŞ 3D ASTRONOT MODELİ
+    function createAstronaut() {
+      const astroGroup = new THREE.Group();
+
+      const suitMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4, metalness: 0.1 });
+      const jointMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+      const visorMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xb45309, emissiveIntensity: 0.35, roughness: 0.15, metalness: 0.9 });
+      const packMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 });
+      const lightMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+
+      // Gövde (Torso)
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.55, 0.85), suitMat);
+      torso.position.y = 2.15;
+      astroGroup.add(torso);
+
+      // Göğüs Kontrol Modülü (DCM)
+      const chestUnit = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.55, 0.25), jointMat);
+      chestUnit.position.set(0, 2.3, 0.48);
+      const statusLed = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.12, 0.05), lightMat);
+      statusLed.position.set(0, 2.4, 0.61);
+      astroGroup.add(chestUnit, statusLed);
+
+      // Yaşam Destek Sırt Çantası (PLSS)
+      const backpack = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.55, 0.65), packMat);
+      backpack.position.set(0, 2.25, -0.65);
+      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 8), jointMat);
+      antenna.position.set(0.35, 3.25, -0.75);
+      astroGroup.add(backpack, antenna);
+
+      // Kask ve Altın Yansımalı Vizör
+      const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.68, 20, 20), suitMat);
+      helmet.position.set(0, 3.45, 0);
+      const visor = new THREE.Mesh(new THREE.SphereGeometry(0.58, 20, 16, 0, Math.PI, 0, Math.PI * 0.65), visorMat);
+      visor.rotation.y = -Math.PI / 2;
+      visor.position.set(0, 3.43, 0.18);
+      astroGroup.add(helmet, visor);
+
+      // Omuz Eklem Pivotları (Kolların vücuttan ayrılmasını önler)
+      const leftShoulder = new THREE.Group();
+      leftShoulder.position.set(-0.85, 2.75, 0);
+      const leftArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.19, 1.35, 12), suitMat);
+      leftArmMesh.position.y = -0.65;
+      leftArmMesh.rotation.z = 0.12;
+      leftShoulder.add(leftArmMesh);
+
+      const rightShoulder = new THREE.Group();
+      rightShoulder.position.set(0.85, 2.75, 0);
+      const rightArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.19, 1.35, 12), suitMat);
+      rightArmMesh.position.y = -0.65;
+      rightArmMesh.rotation.z = -0.12;
+      rightShoulder.add(rightArmMesh);
+      astroGroup.add(leftShoulder, rightShoulder);
+
+      // Kalça Eklem Pivotları (Bacakların tam eklemden sallanmasını sağlar)
+      const leftHip = new THREE.Group();
+      leftHip.position.set(-0.36, 1.4, 0);
+      const leftLegMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 1.4, 12), suitMat);
+      leftLegMesh.position.y = -0.7;
+      leftHip.add(leftLegMesh);
+
+      const rightHip = new THREE.Group();
+      rightHip.position.set(0.36, 1.4, 0);
+      const rightLegMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 1.4, 12), suitMat);
+      rightLegMesh.position.y = -0.7;
+      rightHip.add(rightLegMesh);
+      astroGroup.add(leftHip, rightHip);
+
+      astroGroup.userData = { leftHip, rightHip, leftShoulder, rightShoulder };
+      astroGroup.scale.set(1.25, 1.25, 1.25);
+
+      return astroGroup;
+    }
+
+    const astroMesh = createAstronaut();
+    astroMesh.position.set(habPos.x, getElevation(habPos.x, habPos.z), habPos.z);
     scene.add(astroMesh);
 
-    // Oksijen Menzil Halkası
-    const oxyRing = new THREE.Mesh(
-      new THREE.RingGeometry(38, 39.5, 64),
-      new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.7 })
+    // Arazi Eğimine Tam Oturan Oksijen Menzil Çizgisi (Z-fighting düzeltildi)
+    const oxyPts = [];
+    for (let i = 0; i <= 96; i++) {
+      const a = (i / 96) * Math.PI * 2;
+      const ox = habPos.x + Math.cos(a) * 38.5;
+      const oz = habPos.z + Math.sin(a) * 38.5;
+      oxyPts.push(new THREE.Vector3(ox, getElevation(ox, oz) + 0.45, oz));
+    }
+    const oxyRing = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(oxyPts),
+      new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85 })
+   
     );
-    oxyRing.rotation.x = -Math.PI / 2;
-    oxyRing.position.set(habPos.x, getElevation(habPos.x, habPos.z) + 1.8, habPos.z);
     scene.add(oxyRing);
 
-    // Tehlike Bölgeleri
+    // Arazi Eğimine Oturan Tehlike Bölgesi Halkaları (Zemine gömülme düzeltildi)
     const hazardGroup = new THREE.Group();
     const hazardCoords = [{ x: 5, z: 5 }, { x: -8, z: -10 }, { x: 35, z: 20 }];
     hazardCoords.forEach(pt => {
-      const hZone = new THREE.Mesh(
-        new THREE.RingGeometry(5, 8.5, 32),
-        new THREE.MeshBasicMaterial({ color: 0xff0033, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
-      );
-      hZone.rotation.x = -Math.PI / 2;
-      hZone.position.set(pt.x, getElevation(pt.x, pt.z) + 1.2, pt.z);
-      hazardGroup.add(hZone);
+      [5.5, 7.0, 8.5].forEach(radius => {
+        const hPts = [];
+        for (let i = 0; i <= 48; i++) {
+          const a = (i / 48) * Math.PI * 2;
+          const hx = pt.x + Math.cos(a) * radius;
+          const hz = pt.z + Math.sin(a) * radius;
+          hPts.push(new THREE.Vector3(hx, getElevation(hx, hz) + 0.4, hz));
+        }
+        const hLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(hPts),
+          new THREE.LineBasicMaterial({ color: 0xff0033 })
+        );
+        hazardGroup.add(hLine);
+      });
     });
     scene.add(hazardGroup);
 
-    // 5. 3D Rota Çizgisi
+    // 6. 3D Rota Çizgisi
     let routeLine;
     function draw3DRoute(pointsArray, colorHex) {
       if (routeLine) scene.remove(routeLine);
@@ -266,11 +355,11 @@
       for (let i = 0; i < pointsArray.length - 1; i++) {
         const p1 = pointsArray[i];
         const p2 = pointsArray[i + 1];
-        for (let step = 0; step <= 20; step++) {
-          const t = step / 20;
+        for (let step = 0; step <= 25; step++) {
+          const t = step / 25;
           const ix = p1.x + (p2.x - p1.x) * t;
           const iz = p1.z + (p2.z - p1.z) * t;
-          const iy = getElevation(ix, iz) + 1.0;
+          const iy = getElevation(ix, iz) + 0.45;
           curvePoints.push(new THREE.Vector3(ix, iy, iz));
         }
       }
@@ -283,7 +372,7 @@
 
     let activePath = draw3DRoute([habPos, { x: 18, z: 12 }, sciencePos], 0x10b981);
 
-    // 6. Kontroller
+    // 7. Kontroller
     document.getElementById('chk-grid').onchange = (e) => wireMesh.visible = e.target.checked;
     document.getElementById('chk-slope').onchange = (e) => hazardGroup.visible = e.target.checked;
     document.getElementById('chk-oxy').onchange = (e) => oxyRing.visible = e.target.checked;
@@ -291,17 +380,18 @@
     let cameraMode = 'orbit';
     function setCameraMode(mode) {
       cameraMode = mode;
-      document.getElementById('btn-orbit').classList.toggle('btn-active', mode === 'orbit');
-      document.getElementById('btn-pov').classList.toggle('btn-pov', mode === 'pov');
-      document.getElementById('btn-pov').classList.toggle('btn-active', mode === 'pov');
+    document.getElementById('btn-orbit').classList.toggle('btn-active', mode === 'orbit');
+    document.getElementById('btn-pov').classList.toggle('btn-active', mode === 'pov');
 
       if (mode === 'orbit') {
         controls.enabled = true;
+        astroMesh.visible = true; // Orbital haritada astronotu göster
         camera.position.set(0, 70, 90);
         controls.target.set(0, 0, 0);
         document.getElementById('nav-status').innerText = "MODE: 3D ORBITAL MAP (Drag to Rotate • Scroll to Zoom)";
       } else {
         controls.enabled = false;
+        astroMesh.visible = false; // POV modunda kaskın kamerayı kapatmasını önle
         document.getElementById('nav-status').innerText = "MODE: ASTRONAUT HELMET 3D POV (First-Person Surface View)";
       }
     }
@@ -335,25 +425,45 @@
       document.getElementById('temp').innerText = `${temp} °C (STABLE)`;
     }, 2000);
 
+    // 8. Ana Animasyon Döngüsü
     function animate() {
       requestAnimationFrame(animate);
 
+      const joints = astroMesh.userData;
+
       if (isWalking && walkIndex < activePath.length - 1) {
-        walkIndex += 0.25;
+        walkIndex += 0.28;
         const idx = Math.floor(walkIndex);
         const pt = activePath[idx];
-        astroMesh.position.set(pt.x, pt.y + 0.8, pt.z);
+        const nextPt = activePath[Math.min(idx + 3, activePath.length - 1)];
+
+        const groundY = getElevation(pt.x, pt.z);
+        astroMesh.position.set(pt.x, groundY, pt.z);
+
+        // Yalnızca yatay düzlemde hedefe dön (yokuşta devrilme bugını önler)
+        astroMesh.lookAt(nextPt.x, groundY, nextPt.z);
+
+        // Eklem pivotlarından doğal yürüme animasyonu
+        const swing = Math.sin(walkIndex * 1.4) * 0.45;
+        joints.leftHip.rotation.x = swing;
+        joints.rightHip.rotation.x = -swing;
+        joints.leftShoulder.rotation.x = -swing * 0.7;
+        joints.rightShoulder.rotation.x = swing * 0.7;
 
         if (cameraMode === 'pov') {
-          const nextPt = activePath[Math.min(idx + 3, activePath.length - 1)];
-          camera.position.set(pt.x, pt.y + 2.4, pt.z);
-          camera.lookAt(nextPt.x, nextPt.y + 1.8, nextPt.z);
+          camera.position.set(pt.x, groundY + 4.2, pt.z);
+          camera.lookAt(nextPt.x, getElevation(nextPt.x, nextPt.z) + 3.6, nextPt.z);
         }
       } else {
         isWalking = false;
+        joints.leftHip.rotation.x = 0;
+        joints.rightHip.rotation.x = 0;
+        joints.leftShoulder.rotation.x = 0;
+        joints.rightShoulder.rotation.x = 0;
+
         if (cameraMode === 'pov') {
-          camera.position.set(astroMesh.position.x, astroMesh.position.y + 1.5, astroMesh.position.z);
-          camera.lookAt(sciencePos.x, getElevation(sciencePos.x, sciencePos.z) + 2, sciencePos.z);
+          camera.position.set(astroMesh.position.x, astroMesh.position.y + 4.2, astroMesh.position.z);
+          camera.lookAt(sciencePos.x, getElevation(sciencePos.x, sciencePos.z) + 3.6, sciencePos.z);
         }
       }
 
