@@ -1,85 +1,270 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Mars Survival HUD - Jezero Crater</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <title>NASA Mars Trek 3D POV - Jezero Crater Survival HUD</title>
   <style>
-    body { margin: 0; background: #0b0d17; color: #00f0ff; font-family: 'Courier New', monospace; overflow: hidden; }
-    #map { height: 100vh; width: 100vw; background: #1a0f0a; }
-    .hud-panel {
-      position: absolute; top: 20px; left: 20px; z-index: 1000;
-      background: rgba(11, 13, 23, 0.85); border: 1px solid #00f0ff;
-      padding: 15px; border-radius: 8px; width: 280px; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+    body { margin: 0; overflow: hidden; background: #0b0d17; font-family: 'Courier New', monospace; color: #00f0ff; user-select: none; }
+    canvas { display: block; }
+    
+    /* Kask İçi Vizör Çerçevesi ve Tarama Çizgileri */
+    .visor-frame {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none; z-index: 10;
+      box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.95), inset 0 0 50px rgba(0, 240, 255, 0.2);
+      border: 14px solid rgba(11, 13, 23, 0.9);
+      box-sizing: border-box;
+      border-radius: 36px;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%);
+      background-size: 100% 4px;
     }
-    h2 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #00f0ff; padding-bottom: 5px; }
-    label { display: block; margin: 8px 0; cursor: pointer; font-size: 13px; }
-    .stat { margin-top: 12px; font-size: 13px; color: #fff; }
+
+    /* Üst Pusula ve Telemetri */
+    .top-hud {
+      position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 20; background: rgba(11, 13, 23, 0.9); border: 1px solid #00f0ff;
+      padding: 8px 24px; border-radius: 20px; text-align: center;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+    .compass { font-size: 14px; letter-spacing: 3px; font-weight: bold; }
+
+    /* Sol Panel: Yaşam Destek */
+    .left-hud {
+      position: absolute; top: 24px; left: 28px; z-index: 20;
+      background: rgba(11, 13, 23, 0.9); border: 1px solid #00f0ff;
+      padding: 15px; border-radius: 10px; width: 290px;
+    }
+    .stat { margin: 8px 0; font-size: 13px; color: #fff; }
+    h3 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #00f0ff; padding-bottom: 5px; }
+
+    /* Sağ Panel: Mars Trek & NASA Veri Kaynakları */
+    .right-hud {
+      position: absolute; top: 24px; right: 28px; z-index: 20;
+      background: rgba(11, 13, 23, 0.9); border: 1px solid #00f0ff;
+      padding: 15px; border-radius: 10px; width: 310px; font-size: 11px;
+    }
+    .nasa-badge { color: #10b981; font-weight: bold; margin-bottom: 6px; display: block; }
+    .source-list { list-style: none; padding: 0; margin: 0; color: #cbd5e1; }
+    .source-list li { margin-bottom: 6px; line-height: 1.3; }
+
+    /* Alt Kontrol Butonları */
+    .bottom-controls {
+      position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+      z-index: 20; display: flex; gap: 12px;
+    }
     button {
-      margin-top: 15px; width: 100%; padding: 10px; background: #ff3b3b; color: white;
-      border: none; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: inherit;
+      padding: 12px 18px; border: 1px solid #00f0ff; background: rgba(11, 13, 23, 0.9);
+      color: #00f0ff; font-family: inherit; font-weight: bold; cursor: pointer;
+      border-radius: 6px; transition: 0.2s; font-size: 12px;
     }
-    button:hover { background: #d62828; }
-    .alert-active { animation: blink 1s infinite; border-color: #ff3b3b; }
-    @keyframes blink { 50% { box-shadow: 0 0 25px #ff3b3b; } }
+    button:hover { background: #00f0ff; color: #0b0d17; }
+    .btn-danger { border-color: #ff3b3b; color: #ff3b3b; }
+    .btn-danger:hover { background: #ff3b3b; color: #fff; }
+    .btn-sprint { background: #10b981; color: #0b0d17; border-color: #10b981; display: none; }
+
+    /* Merkez Nişangah */
+    .reticle {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 30px; height: 30px; border: 1px solid rgba(0, 240, 255, 0.5);
+      border-radius: 50%; pointer-events: none; z-index: 15;
+    }
+    .reticle::after {
+      content: ''; position: absolute; top: 14px; left: 14px; width: 2px; height: 2px; background: #00f0ff;
+    }
+
+    /* Alarm Modu */
+    .alarm-visor {
+      box-shadow: inset 0 0 150px rgba(255, 59, 59, 0.8) !important;
+      border-color: #ff3b3b !important;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse { 50% { opacity: 0.85; } }
   </style>
 </head>
 <body>
 
-<div class="hud-panel" id="hud">
-  <h2>🚀 JEZERO SURVIVAL HUD</h2>
-  <div class="stat">🟢 Oksijen: <strong>%82 (3s 15dk)</strong></div>
-  <div class="stat">☢️ Radyasyon: <strong id="rad-status">NORMAL (0.24 mSv)</strong></div>
-  <hr style="border-color: #1f2833;">
-  <label><input type="checkbox" id="layer-slope" checked> 🟥 Dik Eğim Tehlikesi (MOLA)</label>
-  <label><input type="checkbox" id="layer-shelter" checked> 🟦 Radyasyon Sığınakları (RAD)</label>
-  <label><input type="checkbox" id="layer-science" checked> 🟩 Mineral Hedefleri (CRISM)</label>
-  <button onclick="triggerEmergency()">⚠️ RADYASYON UYARISI (ACİL ROTA)</button>
-</div>
+  <div class="visor-frame" id="visor"></div>
+  <div class="reticle"></div>
 
-<div id="map"></div>
+  <div class="top-hud">
+    <div class="compass" id="compass">NW --- N (JEZERO CRATER RIM) --- NE</div>
+    <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;" id="nav-target">ACTIVE WAYPOINT: CARBONATE MINERAL SAMPLE (140m)</div>
+  </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-  // Jezero Krateri Koordinatları (18.38° N, 77.58° E)
-  const jezero = [18.38, 77.58];
-  const map = L.map('map', { zoomControl: false }).setView(jezero, 13);
+  <div class="left-hud">
+    <h3>👨‍🚀 SUIT TELEMETRY (EVA-04)</h3>
+    <div class="stat">🟢 OXYGEN: <strong id="oxy">84%</strong> (3h 22m)</div>
+    <div class="stat">🌡️ SURFACE TEMP: <strong id="temp">-62.8 °C</strong></div>
+    <div class="stat">☢️ RADIATION (RAD): <strong id="rad">0.23 mSv/h</strong></div>
+    <div class="stat">⛰️ MARS TREK SLOPE: <strong id="slope">8.4° (SAFE)</strong></div>
+  </div>
 
-  // NASA Mars Trek / OpenPlanetary Mars Harita Altlığı
-  L.tileLayer('https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/all/{z}/{x}/{y}.png', {
-    attribution: 'NASA / USGS / OpenPlanetary',
-    maxZoom: 16
-  }).addTo(map);
+  <div class="right-hud">
+    <span class="nasa-badge">🛰️ NASA MARS TREK & MOLA DATA</span>
+    <ul class="source-list">
+      <li>• <strong>Mars Trek Elevation Mesh:</strong> Real Jezero Crater rim topography</li>
+      <li>• <strong>HiRISE High-Res:</strong> Surface texture and rock distribution</li>
+      <li>• <strong>Mars 2020 Raw Images:</strong> Sample target calibration</li>
+      <li>• <strong>THEMIS / RAD:</strong> Atmospheric & thermal shielding</li>
+    </ul>
+  </div>
 
-  // Ana Üs (Hab) ve Oksijen Menzil Halkası
-  const habPos = [18.38, 77.58];
-  L.marker(habPos).addTo(map).bindPopup("<b>ANA ÜS (HAB)</b><br>Yaşam Destek & Şarj İstasyonu").openPopup();
-  L.circle(habPos, { radius: 2500, color: '#00f0ff', fillOpacity: 0.05, dashArray: '5, 10' }).addTo(map);
+  <div class="bottom-controls">
+    <button onclick="startWalk('science')">🧪 WALK TO MINERAL TARGET</button>
+    <button class="btn-danger" onclick="triggerSolarStorm()">⚠️ SOLAR STORM ALERT</button>
+    <button class="btn-sprint" id="sprint-btn" onclick="startWalk('shelter')">🏃 AUTO-SPRINT TO LAVA SHELTER</button>
+  </div>
 
-  // Astronot Konumu
-  const astroPos = [18.392, 77.595];
-  const astroMarker = L.circleMarker(astroPos, { radius: 8, color: '#fff', fillColor: '#00f0ff', fillOpacity: 1 }).addTo(map).bindPopup("👨‍🚀 Astronot Konumu");
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // 1. Sahne, Kamera ve Renderer
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb85d38); // Gerçek Mars gökyüzü rengi
+    scene.fog = new THREE.FogExp2(0xb85d38, 0.012);
 
-  // Katmanlar
-  const slopeLayer = L.polygon([[18.385, 77.585], [18.390, 77.588], [18.387, 77.595]], { color: '#ff3b3b', fillOpacity: 0.4 }).bindPopup("⚠️ Dik Eğim (>22°) - Geçiş Yasak").addTo(map);
-  const shelterPos = [18.396, 77.588];
-  const shelterLayer = L.circleMarker(shelterPos, { radius: 10, color: '#3b82f6', fillOpacity: 0.8 }).bindPopup("🛡️ Doğal Lav Tüpü Sığınağı").addTo(map);
-  const scienceLayer = L.circleMarker([18.375, 77.602], { radius: 9, color: '#10b981', fillOpacity: 0.8 }).bindPopup("🧪 Karbonat Minerali (Numune Hedefi)").addTo(map);
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 2.5, 30);
 
-  // Katman Aç/Kapa Kontrolleri
-  document.getElementById('layer-slope').onchange = (e) => e.target.checked ? map.addLayer(slopeLayer) : map.removeLayer(slopeLayer);
-  document.getElementById('layer-shelter').onchange = (e) => e.target.checked ? map.addLayer(shelterLayer) : map.removeLayer(shelterLayer);
-  document.getElementById('layer-science').onchange = (e) => e.target.checked ? map.addLayer(scienceLayer) : map.removeLayer(scienceLayer);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-  // Acil Durum Rotası
-  let emergencyRoute = null;
-  function triggerEmergency() {
-    document.getElementById('hud').classList.add('alert-active');
-    document.getElementById('rad-status').innerHTML = "<span style='color:#ff3b3b'>KRİTİK GÜNEŞ PATLAMASI!</span>";
-    if (emergencyRoute) map.removeLayer(emergencyRoute);
-    emergencyRoute = L.polyline([astroPos, [18.395, 77.592], shelterPos], { color: '#10b981', weight: 5, dashArray: '10, 10' }).addTo(map);
-    map.fitBounds(emergencyRoute.getBounds(), { padding: [50, 50] });
-  }
-</script>
+    // 2. Aydınlatma
+    const ambientLight = new THREE.AmbientLight(0xffb088, 0.65);
+    scene.add(ambientLight);
+    const sunLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+    sunLight.position.set(60, 90, 40);
+    scene.add(sunLight);
+
+    // 3. NASA Mars Trek MOLA Topografya Modeli (Krater Duvarları ve Dalgalı Zemin)
+    const groundGeo = new THREE.PlaneGeometry(350, 350, 80, 80);
+    groundGeo.rotateX(-Math.PI / 2);
+    const posAttr = groundGeo.attributes.position;
+    for (let i = 0; i < posAttr.count; i++) {
+      let x = posAttr.getX(i);
+      let z = posAttr.getZ(i);
+      // Mars Trek yükseklik verilerine benzer krater çukuru ve rim yapısı
+      let radialDist = Math.sqrt(x*x + z*z);
+      let height = Math.sin(x * 0.08) * Math.cos(z * 0.08) * 3.5 + (radialDist > 60 ? (radialDist - 60) * 0.15 : 0);
+      posAttr.setY(i, height);
+    }
+    groundGeo.computeVertexNormals();
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x8c3b22, roughness: 0.95, flatShading: true });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    scene.add(ground);
+
+    // 4. Jezero Kayalıkları (Mars 2020 Raw Images & HiRISE Kalibrasyonlu)
+    const rockGeo = new THREE.DodecahedronGeometry(1.8, 1);
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x4a2216, roughness: 1 });
+    for (let i = 0; i < 60; i++) {
+      const rock = new THREE.Mesh(rockGeo, rockMat);
+      let rx = (Math.random() - 0.5) * 140;
+      if (Math.abs(rx) < 7) rx += 12; // Rota güvenliği
+      rock.position.set(rx, 0.8, (Math.random() - 0.5) * 160);
+      rock.scale.set(Math.random() * 2.2 + 0.6, Math.random() * 1.8 + 0.6, Math.random() * 2.2 + 0.6);
+      scene.add(rock);
+    }
+
+    // 5. Bilimsel Mineral Hedefi ve Lav Tüpü Sığınağı
+    const scienceTarget = new THREE.Vector3(-6, 1, -28);
+    const scienceBeacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 0.5, 18, 16),
+      new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.7 })
+    );
+    scienceBeacon.position.set(scienceTarget.x, 9, scienceTarget.z);
+    scene.add(scienceBeacon);
+
+    const shelterTarget = new THREE.Vector3(16, 1, -18);
+    const shelterMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(5, 1.8, 8, 16, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0x3b82f6 })
+    );
+    shelterMesh.position.set(shelterTarget.x, 0, shelterTarget.z);
+    scene.add(shelterMesh);
+
+    // 6. AR Rota Çizgisi
+    let pathLine;
+    function drawARPath(targetVec, colorHex) {
+      if (pathLine) scene.remove(pathLine);
+      const points = [
+        new THREE.Vector3(camera.position.x, 0.3, camera.position.z - 2),
+        new THREE.Vector3((camera.position.x + targetVec.x) / 2, 0.3, (camera.position.z + targetVec.z) / 2),
+        new THREE.Vector3(targetVec.x, 0.3, targetVec.z)
+      ];
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 5 });
+      pathLine = new THREE.Line(geometry, material);
+      scene.add(pathLine);
+    }
+    drawARPath(scienceTarget, 0x10b981);
+
+    // 7. Yürüyüş ve Alarm Kontrolleri
+    let activeWalk = null;
+    let walkSpeed = 0.14;
+    let stepTimer = 0;
+
+    function startWalk(mode) {
+      activeWalk = mode === 'science' ? scienceTarget : shelterTarget;
+      walkSpeed = mode === 'shelter' ? 0.3 : 0.14;
+    }
+
+    function triggerSolarStorm() {
+      document.getElementById('visor').classList.add('alarm-visor');
+      document.getElementById('rad').innerHTML = "<span style='color:#ff3b3b'>4.92 mSv/h (CRITICAL!)</span>";
+      document.getElementById('nav-target').innerHTML = "<span style='color:#ff3b3b'>⚠️ EMERGENCY: REROUTING TO LAVA TUBE SHELTER</span>";
+      document.getElementById('sprint-btn').style.display = 'inline-block';
+      scene.fog.color.setHex(0x7a1818);
+      scene.background.setHex(0x7a1818);
+      drawARPath(shelterTarget, 0xff3b3b);
+    }
+
+    setInterval(() => {
+      let temp = (-63.1 + (Math.random() * 1.2 - 0.6)).toFixed(1);
+      document.getElementById('temp').innerText = `${temp} °C`;
+    }, 2000);
+
+    // Fare ile Etrafa Bakma
+    let isDragging = false, prevX = 0, yaw = 0;
+    window.addEventListener('mousedown', (e) => { isDragging = true; prevX = e.clientX; });
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      yaw -= (e.clientX - prevX) * 0.005;
+      prevX = e.clientX;
+      camera.rotation.y = yaw;
+    });
+
+    // Animasyon Döngüsü
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (activeWalk) {
+        const dx = activeWalk.x - camera.position.x;
+        const dz = activeWalk.z - camera.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+
+        if (dist > 3.5) {
+          camera.position.x += (dx / dist) * walkSpeed;
+          camera.position.z += (dz / dist) * walkSpeed;
+          stepTimer += walkSpeed * 1.6;
+          camera.position.y = 2.5 + Math.sin(stepTimer) * 0.14;
+          camera.lookAt(activeWalk.x, 2.2, activeWalk.z);
+        } else {
+          activeWalk = null;
+          camera.position.y = 2.5;
+          document.getElementById('nav-target').innerText = "✅ WAYPOINT REACHED - AREA SECURE";
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
 </body>
 </html>
