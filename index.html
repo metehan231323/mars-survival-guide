@@ -1,14 +1,85 @@
-# [Proje Adınız]: Interplanetary Survival Guide (Martian Map)
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Mars Survival HUD - Jezero Crater</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { margin: 0; background: #0b0d17; color: #00f0ff; font-family: 'Courier New', monospace; overflow: hidden; }
+    #map { height: 100vh; width: 100vw; background: #1a0f0a; }
+    .hud-panel {
+      position: absolute; top: 20px; left: 20px; z-index: 1000;
+      background: rgba(11, 13, 23, 0.85); border: 1px solid #00f0ff;
+      padding: 15px; border-radius: 8px; width: 280px; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+    }
+    h2 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #00f0ff; padding-bottom: 5px; }
+    label { display: block; margin: 8px 0; cursor: pointer; font-size: 13px; }
+    .stat { margin-top: 12px; font-size: 13px; color: #fff; }
+    button {
+      margin-top: 15px; width: 100%; padding: 10px; background: #ff3b3b; color: white;
+      border: none; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: inherit;
+    }
+    button:hover { background: #d62828; }
+    .alert-active { animation: blink 1s infinite; border-color: #ff3b3b; }
+    @keyframes blink { 50% { box-shadow: 0 0 25px #ff3b3b; } }
+  </style>
+</head>
+<body>
 
-NASA Space Apps Challenge 2026 - Antalya Team Project
+<div class="hud-panel" id="hud">
+  <h2>🚀 JEZERO SURVIVAL HUD</h2>
+  <div class="stat">🟢 Oksijen: <strong>%82 (3s 15dk)</strong></div>
+  <div class="stat">☢️ Radyasyon: <strong id="rad-status">NORMAL (0.24 mSv)</strong></div>
+  <hr style="border-color: #1f2833;">
+  <label><input type="checkbox" id="layer-slope" checked> 🟥 Dik Eğim Tehlikesi (MOLA)</label>
+  <label><input type="checkbox" id="layer-shelter" checked> 🟦 Radyasyon Sığınakları (RAD)</label>
+  <label><input type="checkbox" id="layer-science" checked> 🟩 Mineral Hedefleri (CRISM)</label>
+  <button onclick="triggerEmergency()">⚠️ RADYASYON UYARISI (ACİL ROTA)</button>
+</div>
 
-## 🎯 Projenin Amacı
-Astronotlar için Jezero Krateri'nde güvenli rota, anlık radyasyon sığınağı ve oksijen bütçesini optimize eden hiper-yerel hayatta kalma ve navigasyon arayüzü.
+<div id="map"></div>
 
-## 🛰️ Kullanılan NASA Veri Setleri
-- **HiRISE & MOLA:** Yüzey topografyası ve eğim analizi
-- **THEMIS & RAD:** Termal durum ve radyasyon sığınak haritalaması
-- **CRISM:** Bilimsel numune/mineral hedefleri
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Jezero Krateri Koordinatları (18.38° N, 77.58° E)
+  const jezero = [18.38, 77.58];
+  const map = L.map('map', { zoomControl: false }).setView(jezero, 13);
 
-## 🛠️ Teknolojiler
-- HTML5, CSS3, JavaScript (Leaflet.js / Canvas)
+  // NASA Mars Trek / OpenPlanetary Mars Harita Altlığı
+  L.tileLayer('https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/all/{z}/{x}/{y}.png', {
+    attribution: 'NASA / USGS / OpenPlanetary',
+    maxZoom: 16
+  }).addTo(map);
+
+  // Ana Üs (Hab) ve Oksijen Menzil Halkası
+  const habPos = [18.38, 77.58];
+  L.marker(habPos).addTo(map).bindPopup("<b>ANA ÜS (HAB)</b><br>Yaşam Destek & Şarj İstasyonu").openPopup();
+  L.circle(habPos, { radius: 2500, color: '#00f0ff', fillOpacity: 0.05, dashArray: '5, 10' }).addTo(map);
+
+  // Astronot Konumu
+  const astroPos = [18.392, 77.595];
+  const astroMarker = L.circleMarker(astroPos, { radius: 8, color: '#fff', fillColor: '#00f0ff', fillOpacity: 1 }).addTo(map).bindPopup("👨‍🚀 Astronot Konumu");
+
+  // Katmanlar
+  const slopeLayer = L.polygon([[18.385, 77.585], [18.390, 77.588], [18.387, 77.595]], { color: '#ff3b3b', fillOpacity: 0.4 }).bindPopup("⚠️ Dik Eğim (>22°) - Geçiş Yasak").addTo(map);
+  const shelterPos = [18.396, 77.588];
+  const shelterLayer = L.circleMarker(shelterPos, { radius: 10, color: '#3b82f6', fillOpacity: 0.8 }).bindPopup("🛡️ Doğal Lav Tüpü Sığınağı").addTo(map);
+  const scienceLayer = L.circleMarker([18.375, 77.602], { radius: 9, color: '#10b981', fillOpacity: 0.8 }).bindPopup("🧪 Karbonat Minerali (Numune Hedefi)").addTo(map);
+
+  // Katman Aç/Kapa Kontrolleri
+  document.getElementById('layer-slope').onchange = (e) => e.target.checked ? map.addLayer(slopeLayer) : map.removeLayer(slopeLayer);
+  document.getElementById('layer-shelter').onchange = (e) => e.target.checked ? map.addLayer(shelterLayer) : map.removeLayer(shelterLayer);
+  document.getElementById('layer-science').onchange = (e) => e.target.checked ? map.addLayer(scienceLayer) : map.removeLayer(scienceLayer);
+
+  // Acil Durum Rotası
+  let emergencyRoute = null;
+  function triggerEmergency() {
+    document.getElementById('hud').classList.add('alert-active');
+    document.getElementById('rad-status').innerHTML = "<span style='color:#ff3b3b'>KRİTİK GÜNEŞ PATLAMASI!</span>";
+    if (emergencyRoute) map.removeLayer(emergencyRoute);
+    emergencyRoute = L.polyline([astroPos, [18.395, 77.592], shelterPos], { color: '#10b981', weight: 5, dashArray: '10, 10' }).addTo(map);
+    map.fitBounds(emergencyRoute.getBounds(), { padding: [50, 50] });
+  }
+</script>
+</body>
+</html>
