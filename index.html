@@ -229,12 +229,33 @@
 
     createMarker(habPos.x, habPos.z, 0x00f0ff, 14);      // Ana Üs (HAB)
     createMarker(sciencePos.x, sciencePos.z, 0x10b981, 16); // Bilimsel Hedef
-    createMarker(shelterPos.x, shelterPos.z, 0x38bdf8, 16); // Lav Tüpü Sığınağı
+    createMarker(shelterPos.x, shelterPos.z, 0xff3b3b, 16); // Sığınak
 
-    // 5. KASK VE VİZÖR HİZALAMASI DÜZELTİLMİŞ 3D ASTRONOT MODELİ
+    // Tehlike Bölgeleri Koordinatları
+    const hazardCoords = [{ x: 5, z: 5 }, { x: -8, z: -10 }, { x: 35, z: 20 }];
+    const hazardGroup = new THREE.Group();
+    hazardCoords.forEach(pt => {
+      [5.5, 7.0, 8.5].forEach(radius => {
+        const hPts = [];
+        for (let i = 0; i <= 48; i++) {
+          const a = (i / 48) * Math.PI * 2;
+          const hx = pt.x + Math.cos(a) * radius;
+          const hz = pt.z + Math.sin(a) * radius;
+          hPts.push(new THREE.Vector3(hx, getElevation(hx, hz) + 0.4, hz));
+        }
+        const hLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(hPts),
+          new THREE.LineBasicMaterial({ color: 0xff0033 })
+        );
+        hazardGroup.add(hLine);
+      });
+    });
+    scene.add(hazardGroup);
+
+    // 5. 3D Astronot Modeli
     function createAstronaut() {
       const astroGroup = new THREE.Group();
-
+     
       const suitMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4, metalness: 0.1 });
       const jointMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
       const visorMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xb45309, emissiveIntensity: 0.35, roughness: 0.15, metalness: 0.9 });
@@ -242,7 +263,7 @@
       const lightMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
       const accentMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 });
 
-      // Gövde (Torso)
+     
       const torso = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.55, 0.85), suitMat);
       torso.position.y = 2.15;
       
@@ -250,39 +271,39 @@
       chestStripe.position.set(0, 2.4, 0);
       astroGroup.add(torso, chestStripe);
 
-      // Göğüs Kontrol Modülü (DCM)
+      
       const chestUnit = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.55, 0.25), jointMat);
       chestUnit.position.set(0, 2.3, 0.48);
       const statusLed = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.05), lightMat);
       statusLed.position.set(0, 2.4, 0.61);
       astroGroup.add(chestUnit, statusLed);
 
-      // Yaşam Destek Sırt Çantası (PLSS)
+      
       const backpack = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.55, 0.65), packMat);
       backpack.position.set(0, 2.25, -0.65);
       const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 8), jointMat);
       antenna.position.set(0.35, 3.25, -0.75);
       astroGroup.add(backpack, antenna);
 
-      // Boyun Halkası (Neck Ring)
+      
       const neckRing = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.2, 16), jointMat);
       neckRing.position.set(0, 3.0, 0);
       astroGroup.add(neckRing);
 
-      // Kask ve Tam Oturan Altın Vizör
+      
       const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.68, 24, 24), suitMat);
-      helmet.position.set(0, 3.65, 0); // Tam boyun halkası üzerine hizalandı
+      helmet.position.set(0, 3.65, 0);
 
       const visor = new THREE.Mesh(
         new THREE.SphereGeometry(0.58, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.55),
         visorMat
       );
-      visor.rotation.x = 0.15; // Hafif öne eğimli profesyonel vizör açısı
+      visor.rotation.x = 0.15;
       visor.position.set(0, 3.62, 0.22);
-
+      
       astroGroup.add(helmet, visor);
 
-      // Omuz Eklem Pivotları (Kollar + Eldiven)
+      
       const leftShoulder = new THREE.Group();
       leftShoulder.position.set(-0.85, 2.75, 0);
       const leftArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.19, 1.1, 12), suitMat);
@@ -306,7 +327,7 @@
       rightShoulder.add(rightArmMesh, rightElve, rightGlove);
       astroGroup.add(leftShoulder, rightShoulder);
 
-      // Kalça Eklem Pivotları (Bacaklar + Botlar)
+      
       const leftHip = new THREE.Group();
       leftHip.position.set(-0.36, 1.4, 0);
       const leftLegMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 1.0, 12), suitMat);
@@ -345,47 +366,31 @@
     const oxyRing = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(oxyPts),
       new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85 })
-    
+   
+   
     );
     scene.add(oxyRing);
 
-    // Tehlike Bölgesi Halkaları
-    const hazardGroup = new THREE.Group();
-    const hazardCoords = [{ x: 5, z: 5 }, { x: -8, z: -10 }, { x: 35, z: 20 }];
-    hazardCoords.forEach(pt => {
-      [5.5, 7.0, 8.5].forEach(radius => {
-        const hPts = [];
-        for (let i = 0; i <= 48; i++) {
-          const a = (i / 48) * Math.PI * 2;
-          const hx = pt.x + Math.cos(a) * radius;
-          const hz = pt.z + Math.sin(a) * radius;
-          hPts.push(new THREE.Vector3(hx, getElevation(hx, hz) + 0.4, hz));
-        }
-        const hLine = new THREE.Line(
-          new THREE.BufferGeometry().setFromPoints(hPts),
-          new THREE.LineBasicMaterial({ color: 0xff0033 })
-        );
-        hazardGroup.add(hLine);
-      });
-    });
-    scene.add(hazardGroup);
-
-    // 6. 3D Rota Çizgisi
+    // 6. ROTA ÇİZİM FONKSİYONU
     let routeLine;
-    function draw3DRoute(pointsArray, colorHex) {
+    let activePath = [];
+
+    function drawCustomRoute(waypointsArray, colorHex) {
       if (routeLine) scene.remove(routeLine);
+
       const curvePoints = [];
-      for (let i = 0; i < pointsArray.length - 1; i++) {
-        const p1 = pointsArray[i];
-        const p2 = pointsArray[i + 1];
-        for (let step = 0; step <= 25; step++) {
-          const t = step / 25;
+      for (let i = 0; i < waypointsArray.length - 1; i++) {
+        const p1 = waypointsArray[i];
+        const p2 = waypointsArray[i + 1];
+        for (let step = 0; step <= 45; step++) {
+          const t = step / 45;
           const ix = p1.x + (p2.x - p1.x) * t;
           const iz = p1.z + (p2.z - p1.z) * t;
           const iy = getElevation(ix, iz) + 0.45;
           curvePoints.push(new THREE.Vector3(ix, iy, iz));
         }
       }
+
       const geo = new THREE.BufferGeometry().setFromPoints(curvePoints);
       const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 5 });
       routeLine = new THREE.Line(geo, mat);
@@ -393,7 +398,7 @@
       return curvePoints;
     }
 
-    let activePath = draw3DRoute([habPos, { x: 18, z: 12 }, sciencePos], 0x10b981);
+
 
     // 7. Kontroller
     document.getElementById('chk-grid').onchange = (e) => wireMesh.visible = e.target.checked;
@@ -424,7 +429,15 @@
 
     function walkMission() {
       const currentPos = { x: astroMesh.position.x, z: astroMesh.position.z };
-      activePath = draw3DRoute([currentPos, { x: 18, z: 12 }, sciencePos], 0x10b981);
+      
+      const safeWaypoints = [
+        currentPos,
+        { x: -5, z: 32 },
+        { x: 25, z: 5 },
+        sciencePos
+      ];
+
+      activePath = drawCustomRoute(safeWaypoints, 0x10b981);
       walkIndex = 0;
       isWalking = true;
       document.getElementById('nav-status').innerText = "MODE: NAVIGATING TO MINERAL TARGET (SAFE ROUTE)";
@@ -438,7 +451,16 @@
       scene.background.setHex(0x3b0707);
 
       const currentPos = { x: astroMesh.position.x, z: astroMesh.position.z };
-      activePath = draw3DRoute([currentPos, { x: -5, z: -22 }, shelterPos], 0xff3b3b);
+      
+      // Solar Storm Alert: İster başlangıçtan ister başka konumdan olsun, tüm hazard bölgelerinin solundan dış koridordan sığınağa kesintisiz giden güvenli hat
+      const emergencyWaypoints = [
+        currentPos,
+        { x: -38, z: 10 },
+        { x: -38, z: -10 },
+        shelterPos
+      ];
+
+      activePath = drawCustomRoute(emergencyWaypoints, 0xff3b3b);
       walkIndex = 0;
       isWalking = true;
     }
@@ -454,15 +476,14 @@
 
       const joints = astroMesh.userData;
 
-      if (isWalking && walkIndex < activePath.length - 1) {
-        walkIndex += 0.28;
+      if (isWalking && activePath.length > 0 && walkIndex < activePath.length - 1) {
+        walkIndex += 0.25;
         const idx = Math.floor(walkIndex);
         const pt = activePath[idx];
         const nextPt = activePath[Math.min(idx + 3, activePath.length - 1)];
 
         const groundY = getElevation(pt.x, pt.z);
-       
-       astroMesh.position.set(pt.x, groundY, pt.z);
+        astroMesh.position.set(pt.x, groundY, pt.z);
         astroMesh.lookAt(nextPt.x, groundY, nextPt.z);
 
 
@@ -485,7 +506,7 @@
 
         if (cameraMode === 'pov') {
           camera.position.set(astroMesh.position.x, astroMesh.position.y + 4.5, astroMesh.position.z);
-          camera.lookAt(sciencePos.x, getElevation(sciencePos.x, sciencePos.z) + 3.8, sciencePos.z);
+          camera.lookAt(shelterPos.x, getElevation(shelterPos.x, shelterPos.z) + 3.8, shelterPos.z);
         }
       }
 
