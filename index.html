@@ -2,47 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>3D Martian Terrain Map & HUD - Jezero Crater</title>
+  <title>3D Martian Terrain Map & HUD - EVA Suit Survival System</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #0b0d17; font-family: 'Courier New', monospace; color: #00f0ff; user-select: none; }
+    body { margin: 0; overflow: hidden; background: #070910; font-family: 'Courier New', monospace; color: #00f0ff; user-select: none; }
     canvas { display: block; }
     
-    /* Kask İçi Vizör Çerçevesi */
+    /* Kask İçi Vizör Çerçevesi ve HUD Efekti */
     .visor-frame {
       position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
       pointer-events: none; z-index: 10;
-      box-shadow: inset 0 0 110px rgba(0, 0, 0, 0.85), inset 0 0 30px rgba(0, 240, 255, 0.2);
-      border: 10px solid rgba(11, 13, 23, 0.85);
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8), inset 0 0 25px rgba(0, 240, 255, 0.25);
+      border: 10px solid rgba(7, 9, 16, 0.9);
       box-sizing: border-box;
       border-radius: 28px;
     }
 
-    /* Üst Bilgi ve Kamera Modu */
+    /* Üst Bilgi */
     .top-hud {
       position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-      z-index: 20; background: rgba(11, 13, 23, 0.9); border: 1px solid #00f0ff;
+      z-index: 20; background: rgba(7, 9, 16, 0.92); border: 1px solid #00f0ff;
       padding: 10px 24px; border-radius: 20px; text-align: center;
       box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
     }
     .compass { font-size: 14px; letter-spacing: 2px; font-weight: bold; }
 
-    /* Sol Panel: Telemetri ve Katman Kontrolleri */
+    /* Sol Panel: EVA Suit Telemetri ve Katmanlar */
     .left-hud {
       position: absolute; top: 20px; left: 24px; z-index: 20;
-      background: rgba(11, 13, 23, 0.9); border: 1px solid #00f0ff;
-      padding: 15px; border-radius: 10px; width: 290px;
+      background: rgba(7, 9, 16, 0.92); border: 1px solid #00f0ff;
+      padding: 15px; border-radius: 10px; width: 305px;
     }
     .stat { margin: 6px 0; font-size: 12px; color: #fff; }
     h3 { margin: 0 0 8px 0; font-size: 13px; border-bottom: 1px solid #00f0ff; padding-bottom: 5px; }
-    label { display: block; margin: 6px 0; cursor: pointer; font-size: 12px; color: #cbd5e1; }
+    label { display: block; margin: 6px 0; cursor: pointer; font-size: 12px; color: #e2e8f0; }
 
-    /* Sağ Panel: NASA Mars Trek Veri Kaynakları */
+    /* Sağ Panel: Yükselti Renk Lejantı (Elevation Legend) */
     .right-hud {
       position: absolute; top: 20px; right: 24px; z-index: 20;
-      background: rgba(11, 13, 23, 0.9); border: 1px solid #00f0ff;
-      padding: 15px; border-radius: 10px; width: 290px; font-size: 11px;
+      background: rgba(7, 9, 16, 0.92); border: 1px solid #00f0ff;
+      padding: 15px; border-radius: 10px; width: 280px; font-size: 11px;
     }
-    .nasa-badge { color: #10b981; font-weight: bold; margin-bottom: 6px; display: block; }
+    .legend-title { color: #00f0ff; font-weight: bold; margin-bottom: 8px; display: block; border-bottom: 1px solid #1e293b; padding-bottom: 4px; }
+    .legend-item { display: flex; align-items: center; margin-bottom: 6px; color: #f8fafc; }
+    .color-box { width: 16px; height: 16px; border-radius: 3px; margin-right: 10px; border: 1px solid rgba(255,255,255,0.4); }
 
     /* Alt Kontrol Butonları */
     .bottom-controls {
@@ -50,18 +52,18 @@
       z-index: 20; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
     }
     button {
-      padding: 10px 16px; border: 1px solid #00f0ff; background: rgba(11, 13, 23, 0.92);
+      padding: 10px 16px; border: 1px solid #00f0ff; background: rgba(7, 9, 16, 0.95);
       color: #00f0ff; font-family: inherit; font-weight: bold; cursor: pointer;
       border-radius: 6px; transition: 0.2s; font-size: 12px;
     }
-    button:hover { background: #00f0ff; color: #0b0d17; }
-    .btn-active { background: #00f0ff; color: #0b0d17; }
+    button:hover { background: #00f0ff; color: #070910; }
+    .btn-active { background: #00f0ff; color: #070910; }
     .btn-danger { border-color: #ff3b3b; color: #ff3b3b; }
     .btn-danger:hover { background: #ff3b3b; color: #fff; }
 
     /* Alarm Modu */
     .alarm-visor {
-      box-shadow: inset 0 0 140px rgba(255, 59, 59, 0.8) !important;
+      box-shadow: inset 0 0 140px rgba(255, 59, 59, 0.85) !important;
       border-color: #ff3b3b !important;
       animation: pulse 1s infinite;
     }
@@ -73,69 +75,68 @@
   <div class="visor-frame" id="visor"></div>
 
   <div class="top-hud">
-    <div class="compass">🛰️ 3D MARS TREK TERRAIN MAP — JEZERO CRATER</div>
+    <div class="compass">🛰️ 3D MOLA ELEVATION MAP — JEZERO CRATER</div>
     <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;" id="nav-status">MODE: 3D ORBITAL MAP (Drag to Rotate • Scroll to Zoom)</div>
   </div>
 
   <div class="left-hud">
-    <h3>👨‍🚀 EVA-04 TELEMETRY & LAYERS</h3>
-    <div class="stat">🟢 OXYGEN: <strong>84%</strong> (3h 22m)</div>
-    <div class="stat">🌡️ TEMP (THEMIS): <strong id="temp">-62.8 °C</strong></div>
-    <div class="stat">☢️ RADIATION (RAD): <strong id="rad">0.23 mSv/h</strong></div>
-    <hr style="border-color: #1f2833; margin: 10px 0;">
-    <label><input type="checkbox" id="chk-grid" checked> 🌐 3D Topographic Wireframe Grid</label>
+    <h3>👨‍🚀 EVA SUIT TELEMETRY (EVA-04)</h3>
+    <div class="stat">🟢 OXYGEN SUPPLY: <strong>84%</strong> (3h 22m left)</div>
+    <div class="stat">🌡️ THERMAL SHIELD: <strong id="temp">-62.8 °C (STABLE)</strong></div>
+    <div class="stat">☢️ RAD SHIELDING: <strong id="rad">0.23 mSv/h (NORMAL)</strong></div>
+    <hr style="border-color: #1e293b; margin: 10px 0;">
+    <label><input type="checkbox" id="chk-grid" checked> 🌐 Topographic Contour Grid</label>
     <label><input type="checkbox" id="chk-slope" checked> 🟥 Steep Slope Hazard Zones (>22°)</label>
-    <label><input type="checkbox" id="chk-oxy" checked> 🔵 Oxygen Safe Range Ring (Isochrone)</label>
+    <label><input type="checkbox" id="chk-oxy" checked> 🔵 Oxygen Safe Range Ring</label>
   </div>
 
   <div class="right-hud">
-    <span class="nasa-badge">🛰️ ACTIVE NASA 3D DATA LAYERS</span>
-    <div style="color: #cbd5e1; line-height: 1.4;">
-      • <strong>MOLA DEM:</strong> 3D Elevation & Crater Rim Mesh<br>
-      • <strong>HiRISE:</strong> High-res surface obstacle mapping<br>
-      • <strong>CRISM:</strong> Carbonate mineral target beacon<br>
-      • <strong>Mars 2020 Raw:</strong> Field hazard calibration
-    </div>
+    <span class="legend-title">📊 MOLA ELEVATION & SLOPE KEY</span>
+    <div class="legend-item"><div class="color-box" style="background: #dc2626;"></div> <span><strong>> +12m:</strong> Crater Rim (No-Go)</span></div>
+    <div class="legend-item"><div class="color-box" style="background: #f97316;"></div> <span><strong>+6m to +12m:</strong> Steep Slope (>20°)</span></div>
+    <div class="legend-item"><div class="color-box" style="background: #eab308;"></div> <span><strong>+2m to +6m:</strong> Moderate Ridge</span></div>
+    <div class="legend-item"><div class="color-box" style="background: #10b981;"></div> <span><strong>-1m to +2m:</strong> Safe Delta Floor</span></div>
+    <div class="legend-item"><div class="color-box" style="background: #2563eb;"></div> <span><strong>< -1m:</strong> Deep Basin / Channel</span></div>
   </div>
 
   <div class="bottom-controls">
     <button id="btn-orbit" class="btn-active" onclick="setCameraMode('orbit')">🛰️ 3D ORBITAL MAP</button>
-    <button id="btn-pov" onclick="setCameraMode('pov')"> ASTRONAUT 3D POV</button>
-    <button onclick="walkMission()"> SIMULATE SAFE ROUTE</button>
-    <button class="btn-danger" onclick="triggerSolarStorm()"> SOLAR STORM ALERT</button>
+    <button id="btn-pov" onclick="setCameraMode('pov')">👨‍🚀 ASTRONAUT 3D POV</button>
+    <button onclick="walkMission()">🧪 SIMULATE SAFE ROUTE</button>
+    <button class="btn-danger" onclick="triggerSolarStorm()">⚠️ SOLAR STORM ALERT</button>
   </div>
 
-  <!-- Three.js ve OrbitControls (3D Harita Döndürme/Zoom için) -->
+  <!-- Three.js ve OrbitControls -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
   <script>
-    // 1. Sahne ve Kamera
+    // 1. Sahne ve Kamera Kurulumu
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x160c08);
-    scene.fog = new THREE.FogExp2(0x160c08, 0.0045);
+    scene.background = new THREE.Color(0x070910);
+    scene.fog = new THREE.FogExp2(0x070910, 0.003);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 65, 85); // Başlangıç: 3D Kuşbakışı Harita Açısı
+    camera.position.set(0, 70, 90);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // 3D Harita Kontrolcüsü (Fare ile döndürme ve yakınlaştırma)
+
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.maxPolarAngle = Math.PI / 2 - 0.05; // Yerin altına girmeyi engelle
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-    // 2. Işıklandırma
-    scene.add(new THREE.AmbientLight(0xffb088, 0.7));
-    const sunLight = new THREE.DirectionalLight(0xffeedd, 1.3);
-    sunLight.position.set(80, 120, 60);
+    // 2. Aydınlatma
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    sunLight.position.set(80, 140, 60);
     scene.add(sunLight);
 
-    // 3. Gerçekçi 3D Arazi Mesh (NASA Mars Trek MOLA Yükseklik Modeli)
+    // 3. Yüksek Kontrastlı MOLA Arazi Mesh Modeli
     const size = 180;
-    const segments = 96;
+    const segments = 110;
     const terrainGeo = new THREE.PlaneGeometry(size, size, segments, segments);
     terrainGeo.rotateX(-Math.PI / 2);
 
@@ -145,11 +146,10 @@
 
     function getElevation(x, z) {
       const dist = Math.sqrt(x * x + z * z);
-      // Jezero Krateri çanağı ve kenar yükseltileri (Crater Rim)
-      let craterRim = dist > 45 ? Math.pow((dist - 45) * 0.22, 1.4) : 0;
-      let deltaHills = Math.sin(x * 0.09) * Math.cos(z * 0.09) * 2.8;
-      let microRoughness = Math.sin(x * 0.3) * Math.sin(z * 0.3) * 0.4;
-      return craterRim + deltaHills + microRoughness;
+      let craterRim = dist > 45 ? Math.pow((dist - 45) * 0.24, 1.45) : 0;
+      let deltaHills = Math.sin(x * 0.09) * Math.cos(z * 0.09) * 3.2;
+      let channel = Math.sin(x * 0.05 + z * 0.05) * 1.5;
+      return craterRim + deltaHills + channel;
     }
 
     for (let i = 0; i < pos.count; i++) {
@@ -158,10 +158,12 @@
       const y = getElevation(x, z);
       pos.setY(i, y);
 
-      // Yükseltiye göre renk gradyanı (MOLA Hypsometric Tint benzeri)
-      if (y > 9) colorObj.setHex(0xd96b43);      // Yüksek krater duvarı
-      else if (y > 3) colorObj.setHex(0xa84627); // Orta eğim
-      else colorObj.setHex(0x782e18);            // Krater tabanı / Delta
+      if (y > 12) colorObj.setHex(0xdc2626);      // Kırmızı (Krater Duvarı)
+      else if (y > 6) colorObj.setHex(0xf97316); // Turuncu (Dik Eğim)
+      else if (y > 2) colorObj.setHex(0xeab308); // Sarı (Orta Eğim)
+      else if (y > -1) colorObj.setHex(0x10b981); // Yeşil (Güvenli Alan)
+      else colorObj.setHex(0x2563eb);            // Mavi (Derin Kanal)
+      
       colors.push(colorObj.r, colorObj.g, colorObj.b);
     }
 
@@ -170,34 +172,35 @@
 
     const terrainMat = new THREE.MeshStandardMaterial({
       vertexColors: true,
-      roughness: 0.9,
+      roughness: 0.65,
+      metalness: 0.1,
       flatShading: true
     });
     const terrain = new THREE.Mesh(terrainGeo, terrainMat);
     scene.add(terrain);
 
-    // 3D Topografik Izgara Katmanı (Wireframe Overlay)
+    // Topografik Izgara
     const wireGeo = new THREE.WireframeGeometry(terrainGeo);
-    const wireMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.12 });
+    const wireMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.14 });
     const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
-    wireMesh.position.y = 0.05;
+    wireMesh.position.y = 0.06;
     scene.add(wireMesh);
 
-    // 4. Harita İşaretçileri (Ana Üs, Bilimsel Hedef, Lav Tüpü Sığınağı, Astronot)
+    // 4. İşaretçiler ve EVA Suit / Habitat Noktaları
     function createMarker(x, z, color, labelHeight) {
       const y = getElevation(x, z);
       const group = new THREE.Group();
       const beacon = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.4, 0.4, labelHeight, 16),
-        new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.75 })
+        new THREE.CylinderGeometry(0.5, 0.5, labelHeight, 16),
+        new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.85 })
       );
       beacon.position.y = labelHeight / 2;
       const ring = new THREE.Mesh(
-        new THREE.RingGeometry(1.5, 2.2, 24),
+        new THREE.RingGeometry(1.8, 2.6, 24),
         new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide })
       );
       ring.rotation.x = -Math.PI / 2;
-      ring.position.y = 0.2;
+      ring.position.y = 0.3;
       group.add(beacon, ring);
       group.position.set(x, y, z);
       scene.add(group);
@@ -208,42 +211,42 @@
     const sciencePos = { x: 22, z: -18 };
     const shelterPos = { x: -25, z: -22 };
 
-    createMarker(habPos.x, habPos.z, 0x00f0ff, 12);      // Ana Üs (HAB)
-    createMarker(sciencePos.x, sciencePos.z, 0x10b981, 14); // Bilimsel Mineral Hedefi
-    createMarker(shelterPos.x, shelterPos.z, 0x3b82f6, 14); // Lav Tüpü Sığınağı
+    createMarker(habPos.x, habPos.z, 0x00f0ff, 14);      // Basecamp / HAB
+    createMarker(sciencePos.x, sciencePos.z, 0xffffff, 16); // Mineral Hedefi
+    createMarker(shelterPos.x, shelterPos.z, 0x38bdf8, 16); // Lav Tüpü Sığınağı
 
-    // Astronot 3D İkonu
+    // Özel Uzay Giysili Astronot Modeli
     const astroMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(1.2, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00f0ff, emissiveIntensity: 0.6 })
+      new THREE.SphereGeometry(1.4, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00f0ff, emissiveIntensity: 0.8 })
     );
-    astroMesh.position.set(habPos.x, getElevation(habPos.x, habPos.z) + 1.5, habPos.z);
+    astroMesh.position.set(habPos.x, getElevation(habPos.x, habPos.z) + 1.6, habPos.z);
     scene.add(astroMesh);
 
-    // Oksijen Menzil Halkası (3D Isochrone Ring)
+    // Oksijen Menzil Halkası (Isochrone)
     const oxyRing = new THREE.Mesh(
-      new THREE.RingGeometry(38, 39.2, 64),
-      new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+      new THREE.RingGeometry(38, 39.5, 64),
+      new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
     );
     oxyRing.rotation.x = -Math.PI / 2;
-    oxyRing.position.set(habPos.x, getElevation(habPos.x, habPos.z) + 1.5, habPos.z);
+    oxyRing.position.set(habPos.x, getElevation(habPos.x, habPos.z) + 1.8, habPos.z);
     scene.add(oxyRing);
 
-    // Tehlikeli Dik Eğim Bölgeleri (Kırmızı 3D Uyarı Alanları)
+    // Tehlike Bölgeleri
     const hazardGroup = new THREE.Group();
     const hazardCoords = [{ x: 5, z: 5 }, { x: -8, z: -10 }, { x: 35, z: 20 }];
     hazardCoords.forEach(pt => {
       const hZone = new THREE.Mesh(
         new THREE.CircleGeometry(7, 24),
-        new THREE.MeshBasicMaterial({ color: 0xff3b3b, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+        new THREE.MeshBasicMaterial({ color: 0xff0044, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
       );
       hZone.rotation.x = -Math.PI / 2;
-      hZone.position.set(pt.x, getElevation(pt.x, pt.z) + 0.6, pt.z);
+      hZone.position.set(pt.x, getElevation(pt.x, pt.z) + 0.8, pt.z);
       hazardGroup.add(hZone);
     });
     scene.add(hazardGroup);
 
-    // 5. 3D Rota Çizgisi (Arazi Eğimine Oturan Çizgi)
+    // 5. Rota Çizgisi
     let routeLine;
     function draw3DRoute(pointsArray, colorHex) {
       if (routeLine) scene.remove(routeLine);
@@ -255,26 +258,25 @@
           const t = step / 20;
           const ix = p1.x + (p2.x - p1.x) * t;
           const iz = p1.z + (p2.z - p1.z) * t;
-          const iy = getElevation(ix, iz) + 0.8;
+          const iy = getElevation(ix, iz) + 1.0;
           curvePoints.push(new THREE.Vector3(ix, iy, iz));
         }
       }
       const geo = new THREE.BufferGeometry().setFromPoints(curvePoints);
-      const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 4 });
+      const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 5 });
       routeLine = new THREE.Line(geo, mat);
       scene.add(routeLine);
       return curvePoints;
     }
 
-    // Başlangıç Güvenli Görev Rotası (Tehlikeli bölgelerin etrafından dolanır)
-    let activePath = draw3DRoute([habPos, { x: 18, z: 12 }, sciencePos], 0x10b981);
+    let activePath = draw3DRoute([habPos, { x: 18, z: 12 }, sciencePos], 0x00f0ff);
 
-    // 6. Katman Kontrolleri
+    // 6. Kontroller
     document.getElementById('chk-grid').onchange = (e) => wireMesh.visible = e.target.checked;
     document.getElementById('chk-slope').onchange = (e) => hazardGroup.visible = e.target.checked;
     document.getElementById('chk-oxy').onchange = (e) => oxyRing.visible = e.target.checked;
 
-    // 7. Kamera Modu Geçişi (3D Harita vs. Astronot POV)
+    
     let cameraMode = 'orbit';
     function setCameraMode(mode) {
       cameraMode = mode;
@@ -283,7 +285,7 @@
 
       if (mode === 'orbit') {
         controls.enabled = true;
-        camera.position.set(0, 65, 85);
+        camera.position.set(0, 70, 90);
         controls.target.set(0, 0, 0);
         document.getElementById('nav-status').innerText = "MODE: 3D ORBITAL MAP (Drag to Rotate • Scroll to Zoom)";
       } else {
@@ -292,7 +294,7 @@
       }
     }
 
-    // 8. Yürüyüş Simülasyonu ve Güneş Fırtınası Alarmı
+
     let walkIndex = 0;
     let isWalking = false;
 
@@ -305,8 +307,8 @@
       document.getElementById('visor').classList.add('alarm-visor');
       document.getElementById('rad').innerHTML = "<span style='color:#ff3b3b'>4.92 mSv/h (CRITICAL!)</span>";
       document.getElementById('nav-status').innerHTML = "<span style='color:#ff3b3b'>⚠️ EMERGENCY: REROUTING TO LAVA TUBE SHELTER</span>";
-      scene.fog.color.setHex(0x4a0e0e);
-      scene.background.setHex(0x4a0e0e);
+      scene.fog.color.setHex(0x3b0707);
+      scene.background.setHex(0x3b0707);
 
       const currentPos = { x: astroMesh.position.x, z: astroMesh.position.z };
       activePath = draw3DRoute([currentPos, { x: -5, z: -22 }, shelterPos], 0xff3b3b);
@@ -314,13 +316,13 @@
       isWalking = true;
     }
 
-    // Canlı Telemetri
+
     setInterval(() => {
       let temp = (-63.1 + (Math.random() * 1.2 - 0.6)).toFixed(1);
-      document.getElementById('temp').innerText = `${temp} °C`;
+      document.getElementById('temp').innerText = `${temp} °C (STABLE)`;
     }, 2000);
 
-    // 9. Ana Döngü
+
     function animate() {
       requestAnimationFrame(animate);
 
@@ -332,7 +334,7 @@
 
         if (cameraMode === 'pov') {
           const nextPt = activePath[Math.min(idx + 3, activePath.length - 1)];
-          camera.position.set(pt.x, pt.y + 2.2, pt.z);
+          camera.position.set(pt.x, pt.y + 2.4, pt.z);
           camera.lookAt(nextPt.x, nextPt.y + 1.8, nextPt.z);
         }
       } else {
