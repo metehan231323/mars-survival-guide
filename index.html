@@ -276,7 +276,7 @@
     document.getElementById('chk-slope').onchange = (e) => hazardGroup.visible = e.target.checked;
     document.getElementById('chk-oxy').onchange = (e) => oxyRing.visible = e.target.checked;
 
-    
+
     let cameraMode = 'orbit';
     function setCameraMode(mode) {
       cameraMode = mode;
@@ -298,10 +298,17 @@
     let walkIndex = 0;
     let isWalking = false;
 
-    function walkMission() {
-      walkIndex = 0;
-      isWalking = true;
-    }
+   function walkMission() {
+  // Astronotun o anki 3D sahnedeki güncel koordinatlarını al
+  const currentPos = { x: astroMesh.position.x, z: astroMesh.position.z };
+  
+  // Rotayı astronotun mevcut konumundan hedef noktaya (sciencePos) yeniden çiz
+  activePath = draw3DRoute([currentPos, { x: 18, z: 12 }, { x: 22, z: -18 }], 0x00f0ff);
+  
+  walkIndex = 0;
+  isWalking = true;
+  document.getElementById('nav-status').innerText = "MODE: NAVIGATING TO MINERAL TARGET (SAFE ROUTE)";
+}
 
     function triggerSolarStorm() {
       document.getElementById('visor').classList.add('alarm-visor');
