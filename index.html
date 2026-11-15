@@ -369,7 +369,7 @@
    
    
     );
-    scene.add(oxyRing);
+    scene.add(oxyRing)
 
     // 6. ROTA ÇİZİM FONKSİYONU
     let routeLine;
@@ -513,7 +513,7 @@
       if (cameraMode === 'orbit') controls.update();
       renderer.render(scene, camera);
     }
-    animate();
+animate();
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
